@@ -32,6 +32,18 @@ def _git(repo: Path, *arguments: str) -> None:
     subprocess.run(["git", *arguments], cwd=repo, check=True, capture_output=True, text=True)
 
 
+def _commit_project_metadata(repo: Path, *, name: str, version: str) -> None:
+    (repo / "pyproject.toml").write_text(
+        f"""[project]
+name = {name}
+version = {version}
+""",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "pyproject.toml")
+    _git(repo, "commit", "-qm", "update metadata")
+
+
 @pytest.fixture
 def clean_project(tmp_path: Path) -> Path:
     repo = tmp_path / "project"
@@ -139,3 +151,120 @@ def test_cli_reports_blocked_identity_as_json_and_nonzero_exit(clean_project: Pa
     assert report["status"] == "APPROVAL_REQUIRED"
     assert report["selected"] is None
     assert completed.stderr == ""
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["1", "1!2.3", "1.2.3rc1", "1.2.dev1", "1.2+local"],
+)
+def test_parse_identity_accepts_pep_440_versions(version: str) -> None:
+    parsed = identity.parse_identity(f"cognilateral-trust=={version}")
+
+    assert parsed.version == version
+
+
+@pytest.mark.parametrize("version", ["", "1..2", "1.2+local..part", "not-a-version", "1.2+bad!"])
+def test_parse_identity_rejects_invalid_pep_440_versions(version: str) -> None:
+    with pytest.raises(ValueError, match="identity version is invalid"):
+        identity.parse_identity(f"cognilateral-trust=={version}")
+
+
+def test_invalid_candidate_has_structured_blocked_result(clean_project: Path) -> None:
+    result = identity.resolve_identity(clean_project, ["cognilateral-trust==not-a-version"])
+
+    assert result == {
+        "approved": None,
+        "candidates": [],
+        "observed": None,
+        "reason": "identity version is invalid",
+        "selected": None,
+        "status": "INVALID_CANDIDATE",
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "version"),
+    [("42", '"1.4.0"'), ('"cognilateral-trust"', "1")],
+)
+def test_non_string_committed_metadata_is_invalid(
+    clean_project: Path,
+    name: str,
+    version: str,
+) -> None:
+    _commit_project_metadata(clean_project, name=name, version=version)
+
+    result = identity.resolve_identity(clean_project, ["cognilateral-trust==1.4.0"])
+
+    assert result["status"] == "SOURCE_METADATA_INVALID"
+    assert result["observed"] is None
+    assert result["reason"] == "committed project name and version must be strings"
+
+
+def test_invalid_committed_metadata_has_structured_blocked_result(clean_project: Path) -> None:
+    (clean_project / "pyproject.toml").write_text("not valid toml =", encoding="utf-8")
+    _git(clean_project, "add", "pyproject.toml")
+    _git(clean_project, "commit", "-qm", "break metadata")
+
+    result = identity.resolve_identity(clean_project, ["cognilateral-trust==1.4.0"])
+
+    assert result["status"] == "SOURCE_METADATA_INVALID"
+    assert result["observed"] is None
+
+
+def test_invalid_approval_has_structured_blocked_result(clean_project: Path) -> None:
+    result = identity.resolve_identity(
+        clean_project,
+        ["cognilateral-trust==1.4.0"],
+        approved="cognilateral-trust==not-a-version",
+    )
+
+    assert result["status"] == "INVALID_APPROVAL"
+    assert result["approved"] is None
+    assert result["selected"] is None
+
+
+def test_approval_outside_candidates_has_structured_blocked_result(clean_project: Path) -> None:
+    result = identity.resolve_identity(
+        clean_project,
+        ["cognilateral-trust==1.4.0"],
+        approved="other-package==1.0",
+    )
+
+    assert result["status"] == "APPROVAL_NOT_A_CANDIDATE"
+    assert result["approved"] == {"distribution": "other-package", "version": "1.0"}
+    assert result["selected"] is None
+
+
+def test_git_status_failure_returns_structured_unavailable_result(
+    clean_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_git = identity._git
+
+    def fail_status(repo: Path, *arguments: str) -> str:
+        if arguments[:1] == ("status",):
+            raise ValueError("status inspection failed")
+        return original_git(repo, *arguments)
+
+    monkeypatch.setattr(identity, "_git", fail_status)
+
+    result = identity.resolve_identity(
+        clean_project,
+        ["cognilateral-trust==1.4.0"],
+        approved="cognilateral-trust==1.4.0",
+    )
+
+    assert result["status"] == "IDENTITY_EVIDENCE_UNAVAILABLE"
+    assert result["observed"] == {"distribution": "cognilateral-trust", "version": "1.4.0"}
+    assert result["candidates"] == [{"distribution": "cognilateral-trust", "version": "1.4.0"}]
+    assert result["selected"] is None
+    assert result["reason"] == "status inspection failed"
+
+
+def test_git_fixture_ignores_ambient_git_dir(clean_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GIT_DIR", str(ROOT / ".git"))
+
+    result = identity.resolve_identity(clean_project, ["cognilateral-trust==1.4.0"])
+
+    assert result["status"] == "APPROVAL_REQUIRED"
+    assert result["observed"] == {"distribution": "cognilateral-trust", "version": "1.4.0"}

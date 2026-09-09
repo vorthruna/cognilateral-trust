@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import tomllib
@@ -16,9 +17,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from packaging.version import InvalidVersion, Version
+
 
 _DISTRIBUTION = re.compile(r"[A-Za-z0-9]+(?:[-_.][A-Za-z0-9]+)*\Z")
-_VERSION = re.compile(r"[0-9]+(?:\.[0-9]+)+(?:[A-Za-z0-9.-]+)?\Z")
 
 
 @dataclass(frozen=True)
@@ -31,7 +33,7 @@ class PackageIdentity:
     @property
     def normalized(self) -> tuple[str, str]:
         distribution = re.sub(r"[-_.]+", "-", self.distribution).lower()
-        return distribution, self.version.lower()
+        return distribution, str(Version(self.version))
 
     def as_dict(self) -> dict[str, str]:
         return {"distribution": self.distribution, "version": self.version}
@@ -44,12 +46,15 @@ def parse_identity(value: str) -> PackageIdentity:
     distribution, version = (part.strip() for part in value.split("=="))
     if not _DISTRIBUTION.fullmatch(distribution):
         raise ValueError("identity distribution is invalid")
-    if not _VERSION.fullmatch(version):
+    try:
+        Version(version)
+    except InvalidVersion:
         raise ValueError("identity version is invalid")
     return PackageIdentity(distribution=distribution, version=version)
 
 
 def _git(repo: Path, *arguments: str) -> str:
+    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     try:
         completed = subprocess.run(
             ["git", *arguments],
@@ -57,6 +62,7 @@ def _git(repo: Path, *arguments: str) -> str:
             check=True,
             capture_output=True,
             text=True,
+            env=environment,
         )
     except (OSError, subprocess.CalledProcessError) as error:
         raise ValueError("Git identity evidence could not be read") from error
@@ -71,9 +77,13 @@ def _observed_identity(repo: Path) -> PackageIdentity:
     metadata = project.get("project")
     if not isinstance(metadata, dict):
         raise ValueError("committed pyproject.toml has no project table")
+    name = metadata.get("name")
+    version = metadata.get("version")
+    if not isinstance(name, str) or not isinstance(version, str):
+        raise ValueError("committed project name and version must be strings")
     try:
-        return parse_identity(f"{metadata['name']}=={metadata['version']}")
-    except (KeyError, TypeError, ValueError) as error:
+        return parse_identity(f"{name}=={version}")
+    except ValueError as error:
         raise ValueError("committed project identity is invalid") from error
 
 
@@ -134,7 +144,17 @@ def resolve_identity(
             reason=str(error),
         )
 
-    if _git(repo, "status", "--porcelain=v1", "--untracked-files=all").strip():
+    try:
+        dirty = _git(repo, "status", "--porcelain=v1", "--untracked-files=all").strip()
+    except ValueError as error:
+        return _result(
+            status="IDENTITY_EVIDENCE_UNAVAILABLE",
+            observed=observed,
+            candidates=candidates,
+            reason=str(error),
+        )
+
+    if dirty:
         return _result(
             status="DIRTY_WORKTREE",
             observed=observed,
