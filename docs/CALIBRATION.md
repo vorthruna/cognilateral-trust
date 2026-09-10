@@ -1,42 +1,61 @@
-# TrustBench Calibration Results
+# TrustBench Calibration
 
-**Model:** cognilateral-trust v1.2.0
-**Date:** 2026-03-26
 **Scenarios:** 200 (40 per domain)
-**Methodology:** Deterministic confidence → tier → route evaluation. No LLM in the loop.
+**Metric:** Expected Calibration Error (ECE) — 0.0 = perfectly calibrated, **lower is better**.
+**Overall score:** `1.0 − ECE` (higher is better), for ranking convenience.
 
-## What This Measures
+## What TrustBench is — and is not
 
-TrustBench measures calibration error: the gap between what the system says (confidence tier → routing decision) and what a correctly calibrated system would say.
+TrustBench ships the **scenarios**, the **scoring**, and a **real-model runner**
+(Ollama, zero extra dependencies). It still publishes **no real-model numbers in this
+repo** — run it yourself and publish your own, with the manifest that proves them.
 
-A perfectly calibrated system has 0.0 error. A system that routes randomly has ~0.5 error.
-
-## Results
-
-| Domain | Calibration Error | Interpretation |
-|--------|------------------:|----------------|
-| Factual | 0.575 | Over-routes factual queries to higher tiers |
-| Reasoning | 0.550 | Over-routes reasoning queries to higher tiers |
-| Ambiguous | 0.250 | Good calibration on genuinely uncertain inputs |
-| Out-of-distribution | 0.250 | Good calibration — correctly escalates unknowns |
-| Adversarial | 0.250 | Good calibration — correctly escalates adversarial inputs |
-| **Overall** | **0.375** | |
-
-## Interpretation
-
-The system is well-calibrated for uncertainty (ambiguous, OOD, adversarial domains — 0.25 error). It over-routes factual/reasoning queries, sending them to higher verification tiers than needed. This is the conservative direction — better to over-escalate than under-escalate.
-
-Improving factual/reasoning calibration (reducing from 0.55 to 0.3) would bring the overall score to ~0.27.
-
-## Reproducibility
+To evaluate a real local model end-to-end, see **[docs/LAB.md](LAB.md)**:
 
 ```bash
-pip install cognilateral-trust
-trust-bench run --model "your-label" --output results.json
+trust-bench run --model qwen3:8b --provider ollama --lab-dir runs/qwen3-8b
 ```
 
-Results are deterministic (no randomness in the evaluation pipeline). Expected variance across runs: 0%.
+Or supply your own `runner` (any backend) — a callable taking a scenario and returning
+`(confidence, correctness)`:
+
+```python
+from cognilateral_trust.bench.cli import run_benchmark
+
+def my_runner(scenario):
+    confidence = ...   # your model's stated confidence for this scenario
+    correct = ...      # 1.0 if your model's answer was correct, else 0.0
+    return confidence, correct
+
+results = run_benchmark("my-model", "results.json", runner=my_runner)
+```
+
+## Synthetic baseline (mock — NOT a model evaluation)
+
+The committed [`bench_results.json`](../bench_results.json) is a **synthetic baseline**: a
+fixed-0.75 confidence probe whose "correctness" is just whether 0.75 lands in each
+scenario's expected band. It exercises the harness end-to-end; it tells you nothing about
+any model. It is self-labeled (`"model": "mock:baseline"`, `"mock": true`).
+
+| Domain | ECE (baseline mock) | Scenarios |
+|--------|--------------------:|----------:|
+| Factual | 0.425 | 40 |
+| Reasoning | 0.450 | 40 |
+| Ambiguous | 0.750 | 40 |
+| Out-of-distribution | 0.750 | 40 |
+| Adversarial | 0.750 | 40 |
+| **Overall score (1 − ECE)** | **0.375** | **200** |
+
+Reproduce:
+
+```bash
+trust-bench run --model baseline --mock --output bench_results.json
+```
+
+Deterministic — expected variance across runs: 0%.
 
 ## Falsifiability
 
-Per D4 (World Cafe decision): these numbers are published so anyone can falsify them. Run TrustBench on your workload. If the calibration error is materially different from what we report, that's a bug — file an issue.
+These are baseline/harness numbers, openly published so the pipeline can be inspected and
+falsified. When real-model results are measured, they will be published the same way —
+labeled with the model and reproducible from the runner that produced them.

@@ -35,8 +35,9 @@ def generate_leaderboard(results: list[BenchScore] | tuple[BenchScore, ...]) -> 
     # Build table rows
     table_rows = ""
     for rank, result in enumerate(sorted_results, 1):
-        # Get domain scores as dict for easy lookup
-        domain_scores_dict = {ds.domain: ds.calibration_error for ds in result.domain_scores}
+        # Render per-domain calibration as a score (1.0 - ECE) so every number in
+        # the table is higher-is-better, consistent with the overall score and footer.
+        domain_scores_dict = {ds.domain: (1.0 - ds.calibration_error) for ds in result.domain_scores}
 
         row_html = f"""    <tr>
       <td class="rank">{rank}</td>
@@ -44,8 +45,8 @@ def generate_leaderboard(results: list[BenchScore] | tuple[BenchScore, ...]) -> 
       <td class="overall-score">{result.overall_score:.4f}</td>
 """
         for domain in sorted_domains:
-            ece = domain_scores_dict.get(domain, 0.0)
-            row_html += f'      <td class="domain-score">{ece:.4f}</td>\n'
+            domain_score = domain_scores_dict.get(domain, 0.0)
+            row_html += f'      <td class="domain-score">{domain_score:.4f}</td>\n'
 
         row_html += "    </tr>\n"
         table_rows += row_html
@@ -221,7 +222,7 @@ def generate_leaderboard(results: list[BenchScore] | tuple[BenchScore, ...]) -> 
   <div class="container">
     <div class="header">
       <h1>TrustBench Leaderboard</h1>
-      <p>Model Epistemic Honesty Rankings — Calibration Error (ECE)</p>
+      <p>Model Epistemic Honesty Rankings — Calibration Score (1 − ECE)</p>
     </div>
 
     <div class="table-wrapper">

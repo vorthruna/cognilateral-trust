@@ -1,30 +1,31 @@
 {
-  "model": "cognilateral-trust-v1.2.0",
+  "model": "mock:baseline",
+  "mock": true,
   "overall_score": 0.375,
   "domain_scores": [
     {
       "domain": "factual",
-      "calibration_error": 0.575,
+      "calibration_error": 0.425,
       "scenario_count": 40
     },
     {
       "domain": "reasoning",
-      "calibration_error": 0.55,
+      "calibration_error": 0.45,
       "scenario_count": 40
     },
     {
       "domain": "ambiguous",
-      "calibration_error": 0.25,
+      "calibration_error": 0.75,
       "scenario_count": 40
     },
     {
       "domain": "out_of_distribution",
-      "calibration_error": 0.25,
+      "calibration_error": 0.75,
       "scenario_count": 40
     },
     {
       "domain": "adversarial",
-      "calibration_error": 0.25,
+      "calibration_error": 0.75,
       "scenario_count": 40
     }
   ]

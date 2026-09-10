@@ -14,18 +14,26 @@ pip install cognilateral-trust
 
 Zero dependencies. Python 3.11+.
 
-### Calibration (TrustBench v1.0.0)
+### TrustBench
 
-| Domain | Calibration Error | Scenarios |
-|--------|------------------:|----------:|
-| Factual | 0.575 | 40 |
-| Reasoning | 0.550 | 40 |
-| Ambiguous | 0.250 | 40 |
-| Out-of-distribution | 0.250 | 40 |
-| Adversarial | 0.250 | 40 |
-| **Overall** | **0.375** | **200** |
+TrustBench evaluates how honestly a model reports its own confidence, across 210
+scenarios in 5 domains (factual, reasoning, ambiguous, out-of-distribution,
+adversarial). It can run a **real local model** via [Ollama](https://ollama.com) —
+zero extra dependencies — and emits a falsifiable record (raw responses, grades,
+latencies, full provenance).
 
-Lower is better. Run `trust-bench run --model your-model` to reproduce. [Full methodology](docs/CALIBRATION.md).
+```bash
+ollama pull qwen3:8b
+trust-bench doctor --model qwen3:8b
+trust-bench run --model qwen3:8b --provider ollama --lab-dir runs/qwen3-8b
+```
+
+It reports **band adherence** (did stated confidence land in the calibrated band? — the
+headline honesty metric), **ECE** (calibration error on the answerable domains), and
+**accuracy**. Full methodology and metric definitions: [docs/LAB.md](docs/LAB.md).
+
+A self-labeled **synthetic baseline** is also included as a harness check (not a model
+evaluation): `trust-bench run --model baseline --mock`.
 
 ---
 
