@@ -367,7 +367,7 @@ This library exists so AI systems can say "I'm not sure enough to act on this" *
 
 ## Contact
 
-Primary channel: `eric@cognilateral.com`. See [the contact page](CONTACT.md) for the full list of channels and the [privacy policy](docs/PRIVACY.md).
+Primary channel: `hello@cognilateral.com`. See [the contact page](CONTACT.md) for the full list of channels and the [privacy policy](docs/PRIVACY.md).
 
 ## License
 

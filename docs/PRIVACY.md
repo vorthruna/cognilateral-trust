@@ -14,4 +14,4 @@ If you opt into the persistence helpers (`JSONLPredictionStore`, `JSONLAccountab
 
 ## Contact
 
-`eric@cognilateral.com` for any questions about how the library handles data.
+`hello@cognilateral.com` for any questions about how the library handles data.
