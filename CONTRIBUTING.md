@@ -5,7 +5,7 @@ We welcome contributions. The library is small by design — zero dependencies, 
 ## Quick Start
 
 ```bash
-git clone https://github.com/heymumford/cognilateral-trust.git
+git clone https://github.com/vorthruna/cognilateral-trust.git
 cd cognilateral-trust
 uv sync
 uv run pytest tests/ -q

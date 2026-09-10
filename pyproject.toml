@@ -29,7 +29,7 @@ cognilateral-trust-mcp = "cognilateral_trust.mcp.main:run"
 
 [project.urls]
 Homepage = "https://cognilateral.com"
-Repository = "https://github.com/heymumford/cognilateral-trust"
+Repository = "https://github.com/vorthruna/cognilateral-trust"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/cognilateral_trust"]
