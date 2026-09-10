@@ -7,36 +7,36 @@ import pytest
 from cognilateral_trust.bench.scoring import (
     BenchResult,
     DomainScore,
+    calibration_score,
     expected_calibration_error,
     score_results,
 )
 
 
 class TestExpectedCalibrationError:
-    """A-tests: ECE scoring correctness."""
+    """A-tests: ECE correctness. ECE is a TRUE error — 0.0 = perfect, lower is better."""
 
     def test_a1_perfect_calibration(self) -> None:
-        """When confidences match accuracy, ECE is high (near 1.0)."""
-        # Perfect calibration: confidence = accuracy in all bins
-        # In 0.9 bin: 100% accuracy, in 0.1 bin: 0% accuracy, ECE = |0.9-1.0|*0.5 + |0.1-0|*0.5 = 0.1
-        # So score = 1 - 0.1 = 0.9
+        """When confidences match accuracy, ECE is low (near 0.0)."""
+        # In 0.9 bin: 100% accuracy, in 0.1 bin: 0% accuracy.
+        # ECE = |0.9-1.0|*0.5 + |0.1-0|*0.5 = 0.1
         confidences = [0.9, 0.9, 0.9, 0.1, 0.1, 0.1]
         correctness = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
-        score = expected_calibration_error(confidences, correctness)
-        assert score >= 0.85, f"Expected good calibration (≥0.85), got {score}"
+        ece = expected_calibration_error(confidences, correctness)
+        assert ece <= 0.15, f"Expected good calibration (ECE ≤ 0.15), got {ece}"
 
     def test_a2_overconfident_model(self) -> None:
-        """When model is overconfident, ECE is low."""
-        # Always confident (0.9) but mostly wrong (0.1 accuracy)
+        """When model is overconfident, ECE is high."""
+        # Always confident (0.9) but mostly wrong (0.1 accuracy) → ECE ≈ 0.8
         confidences = [0.9] * 10
         correctness = [0.0] * 9 + [1.0]  # 10% accuracy
-        score = expected_calibration_error(confidences, correctness)
-        assert score < 0.5, f"Expected low score for overconfident model, got {score}"
+        ece = expected_calibration_error(confidences, correctness)
+        assert ece > 0.5, f"Expected high ECE for overconfident model, got {ece}"
 
     def test_a3_empty_input_returns_zero(self) -> None:
         """Given empty inputs, ECE returns 0.0."""
-        score = expected_calibration_error([], [])
-        assert score == 0.0
+        ece = expected_calibration_error([], [])
+        assert ece == 0.0
 
     def test_a4_length_mismatch_raises_error(self) -> None:
         """Given mismatched lengths, raises ValueError."""
@@ -48,28 +48,26 @@ class TestExpectedCalibrationError:
         confidences = [0.8, 0.7, 0.6, 0.9, 0.5]
         correctness = [1.0, 1.0, 0.0, 1.0, 0.0]
 
-        score1 = expected_calibration_error(confidences, correctness)
-        score2 = expected_calibration_error(confidences, correctness)
-        score3 = expected_calibration_error(confidences, correctness)
+        ece1 = expected_calibration_error(confidences, correctness)
+        ece2 = expected_calibration_error(confidences, correctness)
+        ece3 = expected_calibration_error(confidences, correctness)
 
-        assert score1 == score2 == score3
+        assert ece1 == ece2 == ece3
 
     def test_a6_bins_are_created_correctly(self) -> None:
         """ECE bins partition confidence space [0, 1] into equal intervals."""
-        # All samples in [0.0-0.1) bin with 0% accuracy, confidence 0.05
-        # ECE = |0.05 - 0| = 0.05, score = 1 - 0.05 = 0.95
+        # All samples in [0.0-0.1) bin with 0% accuracy, confidence 0.05 → ECE ≈ 0.05
         confidences = [0.05] * 10
         correctness = [0.0] * 10
-        score = expected_calibration_error(confidences, correctness, num_bins=10)
-        # Very confident (0.05) but all wrong → ECE≈0.05, score≈0.95
-        assert score > 0.9, f"Expected high score (~0.95), got {score}"
+        ece = expected_calibration_error(confidences, correctness, num_bins=10)
+        assert ece < 0.1, f"Expected low ECE (~0.05), got {ece}"
 
     def test_a7_uniform_confidence_uniform_accuracy(self) -> None:
         """When confidence and accuracy are uniformly distributed, ECE is moderate."""
         confidences = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
         correctness = [0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        score = expected_calibration_error(confidences, correctness)
-        assert 0.4 < score < 0.8, f"Expected moderate score, got {score}"
+        ece = expected_calibration_error(confidences, correctness)
+        assert 0.2 < ece < 0.6, f"Expected moderate ECE, got {ece}"
 
     def test_a8_tuple_inputs_work(self) -> None:
         """ECE accepts both list and tuple inputs."""
@@ -79,22 +77,49 @@ class TestExpectedCalibrationError:
         confidences_tuple = tuple(confidences_list)
         correctness_tuple = tuple(correctness_list)
 
-        score_list = expected_calibration_error(confidences_list, correctness_list)
-        score_tuple = expected_calibration_error(confidences_tuple, correctness_tuple)
+        ece_list = expected_calibration_error(confidences_list, correctness_list)
+        ece_tuple = expected_calibration_error(confidences_tuple, correctness_tuple)
 
-        assert score_list == score_tuple
+        assert ece_list == ece_tuple
 
     def test_a9_custom_num_bins(self) -> None:
         """ECE accepts custom bin count."""
         confidences = [0.5, 0.5, 0.5, 0.5]
         correctness = [1.0, 1.0, 0.0, 0.0]
 
-        score_5_bins = expected_calibration_error(confidences, correctness, num_bins=5)
-        score_20_bins = expected_calibration_error(confidences, correctness, num_bins=20)
+        ece_5_bins = expected_calibration_error(confidences, correctness, num_bins=5)
+        ece_20_bins = expected_calibration_error(confidences, correctness, num_bins=20)
 
-        # Both should be valid scores
-        assert 0.0 <= score_5_bins <= 1.0
-        assert 0.0 <= score_20_bins <= 1.0
+        assert 0.0 <= ece_5_bins <= 1.0
+        assert 0.0 <= ece_20_bins <= 1.0
+
+
+class TestCalibrationScore:
+    """A-tests: calibration_score is the higher-is-better counterpart (1.0 - ECE)."""
+
+    def test_score_is_one_minus_ece(self) -> None:
+        """calibration_score == 1.0 - expected_calibration_error for the same inputs."""
+        confidences = [0.9, 0.9, 0.9, 0.1, 0.1, 0.1]
+        correctness = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+        ece = expected_calibration_error(confidences, correctness)
+        score = calibration_score(confidences, correctness)
+        assert abs(score - (1.0 - ece)) < 1e-12
+
+    def test_good_calibration_scores_high(self) -> None:
+        """Well-calibrated inputs yield a high score (near 1.0)."""
+        confidences = [0.9, 0.9, 0.9, 0.1, 0.1, 0.1]
+        correctness = [1.0, 1.0, 1.0, 0.0, 0.0, 0.0]
+        assert calibration_score(confidences, correctness) >= 0.85
+
+    def test_overconfident_scores_low(self) -> None:
+        """Overconfident inputs yield a low score."""
+        confidences = [0.9] * 10
+        correctness = [0.0] * 9 + [1.0]
+        assert calibration_score(confidences, correctness) < 0.5
+
+    def test_empty_input_returns_zero(self) -> None:
+        """Empty inputs return 0.0."""
+        assert calibration_score([], []) == 0.0
 
 
 class TestScoreResults:
@@ -199,3 +224,9 @@ class TestBenchResultImmutability:
 
         with pytest.raises(AttributeError):
             ds.domain = "modified"  # type: ignore
+
+
+class TestCalibrationScoreInputValidation:
+    def test_empty_confidences_with_correctness_labels_is_a_length_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="Length mismatch"):
+            calibration_score([], [1.0])

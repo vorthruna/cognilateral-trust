@@ -9,6 +9,7 @@ __all__ = [
     "DomainScore",
     "BenchScore",
     "expected_calibration_error",
+    "calibration_score",
     "score_results",
 ]
 
@@ -34,7 +35,8 @@ class DomainScore:
 
     Attributes:
         domain: Domain name (factual, reasoning, etc.)
-        calibration_error: ECE for this domain [0.0, 1.0]
+        calibration_error: Expected Calibration Error (ECE) for this domain
+            [0.0, 1.0]. 0.0 = perfectly calibrated, higher = worse. (Lower is better.)
         scenario_count: Number of scenarios evaluated in this domain
     """
 
@@ -49,7 +51,8 @@ class BenchScore:
 
     Attributes:
         model: Model name or identifier
-        overall_score: Overall ECE across all domains [0.0, 1.0]
+        overall_score: Overall calibration score (1.0 - ECE) across all domains
+            [0.0, 1.0]. 1.0 = perfectly calibrated, higher is better.
         domain_scores: Tuple of DomainScore, one per domain
     """
 
@@ -77,8 +80,9 @@ def expected_calibration_error(
         num_bins: Number of bins to partition confidence space (default 10)
 
     Returns:
-        Calibration score [0.0, 1.0] where 1.0 = perfect calibration.
-        Score = 1.0 - ECE, so higher is better.
+        Expected Calibration Error in [0.0, 1.0], where 0.0 = perfect calibration
+        and higher values = worse calibration. (Lower is better.) For a
+        higher-is-better quality score, use ``calibration_score()``.
         If inputs are empty, returns 0.0.
 
     Raises:
@@ -119,8 +123,35 @@ def expected_calibration_error(
         bin_weight = len(in_bin) / len(confidences_list)
         total_error += abs(bin_confidence - bin_accuracy) * bin_weight
 
-    # Convert error to score [0.0, 1.0]: score = 1 - error (higher is better)
-    return 1.0 - total_error
+    # Return the Expected Calibration Error itself (lower is better).
+    return total_error
+
+
+def calibration_score(
+    confidences: list[float] | tuple[float, ...],
+    correctness: list[float] | tuple[float, ...],
+    num_bins: int = 10,
+) -> float:
+    """Calibration quality score = 1.0 - ECE.
+
+    A higher-is-better counterpart to :func:`expected_calibration_error`.
+
+    Args:
+        confidences: Model confidence scores [0.0, 1.0]
+        correctness: Binary correctness labels (1.0 = correct, 0.0 = wrong)
+        num_bins: Number of bins to partition confidence space (default 10)
+
+    Returns:
+        Score in [0.0, 1.0] where 1.0 = perfect calibration, higher is better.
+        If inputs are empty, returns 0.0.
+    """
+    if len(confidences) != len(correctness):
+        raise ValueError(
+            f"Length mismatch: confidences ({len(confidences)}) != correctness ({len(correctness)})"
+        )
+    if not confidences:
+        return 0.0
+    return 1.0 - expected_calibration_error(confidences, correctness, num_bins)
 
 
 def score_results(
@@ -129,7 +160,8 @@ def score_results(
 ) -> BenchScore:
     """Score model results across all domains.
 
-    Computes per-domain ECE and overall ECE across all domains.
+    Computes per-domain ECE and an overall calibration score (1.0 - ECE, higher is
+    better) across all domains.
 
     Args:
         model_name: Name or identifier of the model
@@ -164,8 +196,8 @@ def score_results(
         all_confidences.extend(confidences)
         all_correctness.extend(correctness)
 
-    # Overall score across all domains
-    overall_score = expected_calibration_error(all_confidences, all_correctness) if all_confidences else 0.0
+    # Overall score across all domains (1.0 - ECE; higher is better)
+    overall_score = calibration_score(all_confidences, all_correctness) if all_confidences else 0.0
 
     return BenchScore(
         model=model_name,

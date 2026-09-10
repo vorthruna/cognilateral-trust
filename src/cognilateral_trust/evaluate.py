@@ -59,6 +59,10 @@ def evaluate_trust(
     reasons: tuple[str, ...] = ()
 
     if routing.requires_sovereignty_gate:
+        # Note: the sovereignty gate only engages at tier >= 7, i.e. confidence >= 0.7.
+        # A low-confidence escalation check here would be dead code (confidence can
+        # never be < 0.5 inside this branch). Low-confidence actions are routed to the
+        # "basic"/"warrant_check" bands by route_by_tier(), not to the sovereignty gate.
         if not is_reversible:
             should_proceed = False
             verdict = "ESCALATE"
@@ -67,10 +71,6 @@ def evaluate_trust(
             should_proceed = False
             verdict = "ESCALATE"
             reasons = ("external system impact at sovereignty-grade tier",)
-        elif confidence < 0.5:
-            should_proceed = False
-            verdict = "ESCALATE"
-            reasons = (f"low confidence ({confidence:.2f}) at sovereignty-grade tier",)
 
     record = create_accountability_record(
         verdict=verdict,

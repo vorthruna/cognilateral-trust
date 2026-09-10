@@ -18,6 +18,7 @@ from cognilateral_trust.bench.scoring import (
     BenchResult,
     BenchScore,
     DomainScore,
+    calibration_score,
     expected_calibration_error,
     score_results,
 )
@@ -32,6 +33,7 @@ __all__ = [
     "DomainScore",
     "BenchScore",
     "expected_calibration_error",
+    "calibration_score",
     "score_results",
     # Fingerprint
     "FingerprintSpoke",
