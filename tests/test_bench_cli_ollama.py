@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+
 from cognilateral_trust.bench.cli import main
 
 
@@ -80,3 +81,25 @@ class TestRunOllama:
         code = main(["run", "--model", "qwen3:8b", "--provider", "ollama"])
         assert code == 2
         assert "not reachable" in capsys.readouterr().err
+
+
+class TestSampleCountValidation:
+    def test_zero_samples_is_rejected_before_any_run(self, monkeypatch, capsys) -> None:
+        _install_fake_ollama(monkeypatch)
+        with pytest.raises(SystemExit) as exit_info:
+            main(["run", "--model", "qwen3:8b", "--provider", "ollama", "--samples", "0"])
+        assert exit_info.value.code == 2
+        assert "at least 1" in capsys.readouterr().err
+
+
+class TestDoctorTagMatching:
+    def test_same_base_different_tag_is_not_present(self, monkeypatch, capsys) -> None:
+        _install_fake_ollama(monkeypatch, models=("qwen3:14b",))
+        code = main(["doctor", "--host", "http://h", "--model", "qwen3:8b"])
+        assert code == 1
+        assert "not found" in capsys.readouterr().out
+
+    def test_bare_base_name_matches_any_installed_tag(self, monkeypatch, capsys) -> None:
+        _install_fake_ollama(monkeypatch, models=("qwen3:14b",))
+        code = main(["doctor", "--host", "http://h", "--model", "qwen3"])
+        assert code == 0

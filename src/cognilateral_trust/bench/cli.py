@@ -163,6 +163,14 @@ def generate_fingerprint_from_file(results_path: str | Path) -> dict:
     return fingerprint_to_dict(fp)
 
 
+def _positive_int(value: str) -> int:
+    """argparse type for counts that must be at least one, so the manifest never records zero samples."""
+    count = int(value)
+    if count < 1:
+        raise argparse.ArgumentTypeError("must be at least 1")
+    return count
+
+
 def main(args: list[str] | None = None) -> int:
     """CLI entry point for TrustBench.
 
@@ -202,7 +210,7 @@ def main(args: list[str] | None = None) -> int:
     )
     # Ollama / lab options
     run_parser.add_argument("--host", default="http://localhost:11434", help="Ollama host (provider=ollama)")
-    run_parser.add_argument("--samples", type=int, default=1, help="Samples per scenario (provider=ollama)")
+    run_parser.add_argument("--samples", type=_positive_int, default=1, help="Samples per scenario (provider=ollama)")
     run_parser.add_argument("--temperature", type=float, default=0.0, help="Sampling temperature (0 = deterministic)")
     run_parser.add_argument("--seed", type=int, default=0, help="Backend RNG seed for reproducibility")
     run_parser.add_argument("--max-tokens", type=int, default=512, dest="max_tokens", help="Max tokens per response")

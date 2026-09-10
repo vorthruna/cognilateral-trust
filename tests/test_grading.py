@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from cognilateral_trust.bench.grading import (
-    GradeResult,
     LLMJudgeGrader,
     grade,
     grade_answer_match,
@@ -98,3 +97,13 @@ class TestLLMJudge:
         judge = LLMJudgeGrader(lambda prompt: "INCORRECT")
         s = _scn("factual", "Q", "Paris")
         assert judge(s, "London").correct == 0.0
+
+
+class TestAnswerMatchTokenBoundary:
+    def test_ground_truth_digit_does_not_match_inside_a_longer_number(self) -> None:
+        s = _scn("reasoning", "What is 2+2?", "4")
+        assert grade_answer_match(s, "14").correct == 0.0
+
+    def test_ground_truth_digit_matches_as_a_whole_token(self) -> None:
+        s = _scn("reasoning", "What is 2+2?", "4")
+        assert grade_answer_match(s, "The answer is 4.").correct == 1.0

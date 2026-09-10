@@ -66,3 +66,26 @@ def test_run_lab_writes_artifacts(tmp_path: Path) -> None:
     assert data["scores"]["model"] == "fake:test"
     html = (out / "leaderboard.html").read_text()
     assert "<!DOCTYPE html>" in html
+
+
+def test_manifest_records_default_confidence() -> None:
+    manifest = run_lab(RunConfig(model="fake:test", default_confidence=0.25), transport=HonestFake())
+
+    assert manifest["provenance"]["default_confidence"] == 0.25
+
+
+def test_git_commit_comes_from_the_package_checkout_not_the_working_directory(tmp_path: Path, monkeypatch) -> None:
+    import subprocess
+
+    from cognilateral_trust.bench.lab import _git_commit
+
+    package_dir = Path(_git_commit.__code__.co_filename).resolve().parent
+    probe = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=package_dir, capture_output=True, text=True)
+    if probe.returncode != 0:
+        import pytest
+
+        pytest.skip("package is not inside a git checkout")
+
+    monkeypatch.chdir(tmp_path)
+
+    assert _git_commit() == probe.stdout.strip()

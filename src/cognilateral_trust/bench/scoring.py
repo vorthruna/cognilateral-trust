@@ -145,6 +145,10 @@ def calibration_score(
         Score in [0.0, 1.0] where 1.0 = perfect calibration, higher is better.
         If inputs are empty, returns 0.0.
     """
+    if len(confidences) != len(correctness):
+        raise ValueError(
+            f"Length mismatch: confidences ({len(confidences)}) != correctness ({len(correctness)})"
+        )
     if not confidences:
         return 0.0
     return 1.0 - expected_calibration_error(confidences, correctness, num_bins)
@@ -156,7 +160,8 @@ def score_results(
 ) -> BenchScore:
     """Score model results across all domains.
 
-    Computes per-domain ECE and overall ECE across all domains.
+    Computes per-domain ECE and an overall calibration score (1.0 - ECE, higher is
+    better) across all domains.
 
     Args:
         model_name: Name or identifier of the model

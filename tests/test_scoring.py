@@ -224,3 +224,9 @@ class TestBenchResultImmutability:
 
         with pytest.raises(AttributeError):
             ds.domain = "modified"  # type: ignore
+
+
+class TestCalibrationScoreInputValidation:
+    def test_empty_confidences_with_correctness_labels_is_a_length_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="Length mismatch"):
+            calibration_score([], [1.0])

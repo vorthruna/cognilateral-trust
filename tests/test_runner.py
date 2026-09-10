@@ -129,3 +129,15 @@ class TestMakeScenarioRunner:
         assert result["mock"] is False
         assert result["model"] == "real-model"
         assert 0.0 <= result["overall_score"] <= 1.0
+
+
+class TestParseResponseConfidenceLine:
+    def test_confidence_phrase_inside_answer_is_ignored(self) -> None:
+        answer, conf = parse_response("Answer: I am very confident it is Paris")
+        assert "Paris" in answer
+        assert conf is None
+
+    def test_confidence_line_wins_over_phrases_in_the_answer(self) -> None:
+        answer, conf = parse_response("Answer: I'm 90% confident it's Paris\nConfidence: 0.40")
+        assert answer == "I'm 90% confident it's Paris"
+        assert conf == 0.40

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,8 +29,28 @@ def _load_instrument() -> Any:
 identity = _load_instrument()
 
 
+def _without_git_environment() -> dict[str, str]:
+    return {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+
+
+@pytest.fixture(autouse=True)
+def _scrub_ambient_git_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep fixture repositories hermetic from GIT_DIR, GIT_WORK_TREE, author and committer overrides."""
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key, raising=False)
+
+
 def _git(repo: Path, *arguments: str) -> None:
-    subprocess.run(["git", *arguments], cwd=repo, check=True, capture_output=True, text=True)
+    subprocess.run(
+        ["git", *arguments],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=_without_git_environment(),
+    )
 
 
 def _commit_project_metadata(repo: Path, *, name: str, version: str) -> None:
@@ -268,3 +289,66 @@ def test_git_fixture_ignores_ambient_git_dir(clean_project: Path, monkeypatch: p
 
     assert result["status"] == "APPROVAL_REQUIRED"
     assert result["observed"] == {"distribution": "cognilateral-trust", "version": "1.4.0"}
+
+
+def test_instrument_runs_on_the_standard_library_alone() -> None:
+    source = SCRIPT.read_text(encoding="utf-8")
+
+    assert "packaging" not in source.replace("Package", "")
+
+
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        ("1.0", "1.0.0"),
+        ("v1.0", "1"),
+        ("1.0alpha1", "1.0a1"),
+        ("1.0-post2", "1.0.post2"),
+        ("1.0+Ubuntu.1", "1.0+ubuntu-1"),
+    ],
+)
+def test_equivalent_pep_440_spellings_share_one_identity(left: str, right: str) -> None:
+    assert identity.canonical_version(left) == identity.canonical_version(right)
+
+
+def test_epoch_and_local_versions_can_reach_ready(clean_project: Path) -> None:
+    _commit_project_metadata(clean_project, name='"cognilateral-trust"', version='"1!1.4.0+linux"')
+
+    result = identity.resolve_identity(
+        clean_project,
+        ["cognilateral-trust==1!1.4.0+linux"],
+        approved="cognilateral-trust==1!1.4.0+linux",
+    )
+
+    assert result["status"] == "READY"
+
+
+def test_committed_metadata_decodes_as_utf8_under_a_non_utf8_locale(clean_project: Path) -> None:
+    (clean_project / "pyproject.toml").write_text(
+        '[project]\nname = "cognilateral-trust"\nversion = "1.4.0"\ndescription = "café"\n',
+        encoding="utf-8",
+    )
+    _git(clean_project, "add", "pyproject.toml")
+    _git(clean_project, "commit", "-qm", "non-ascii description")
+    environment = _without_git_environment()
+    environment.update({"LC_ALL": "C", "LANG": "C", "PYTHONUTF8": "0", "PYTHONCOERCECLOCALE": "0"})
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--repo",
+            str(clean_project),
+            "--candidate",
+            "cognilateral-trust==1.4.0",
+            "--approved",
+            "cognilateral-trust==1.4.0",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=environment,
+    )
+
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert json.loads(completed.stdout)["status"] == "READY"

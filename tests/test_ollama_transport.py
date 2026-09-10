@@ -95,6 +95,7 @@ class TestDiagnostics:
         assert model_present("qwen3:8b", "http://h", opener=opener) is True
         assert model_present("qwen3", "http://h", opener=opener) is True
         assert model_present("mistral", "http://h", opener=opener) is False
+        assert model_present("qwen3:14b", "http://h", opener=opener) is False
 
     def test_available_true_and_false(self) -> None:
         ok = make_opener({"/api/version": {"version": "0.3.0"}})

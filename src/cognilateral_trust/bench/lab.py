@@ -13,7 +13,6 @@ from __future__ import annotations
 import json
 import platform
 import subprocess
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
@@ -52,6 +51,7 @@ def _git_commit() -> str:
             capture_output=True,
             text=True,
             timeout=3,
+            cwd=Path(__file__).resolve().parent,
         )
         if out.returncode == 0:
             return out.stdout.strip()
@@ -125,6 +125,7 @@ def build_manifest(
             "seed": config.seed,
             "num_samples": config.num_samples,
             "max_tokens": config.max_tokens,
+            "default_confidence": config.default_confidence,
             "grader": grader_name,
             "prompt_version": PROMPT_VERSION,
             "prompt_hash": prompt_template_hash(),

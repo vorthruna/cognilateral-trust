@@ -16,7 +16,7 @@ Zero dependencies. Python 3.11+.
 
 ### TrustBench
 
-TrustBench evaluates how honestly a model reports its own confidence, across 210
+TrustBench evaluates how honestly a model reports its own confidence, across 200
 scenarios in 5 domains (factual, reasoning, ambiguous, out-of-distribution,
 adversarial). It can run a **real local model** via [Ollama](https://ollama.com) —
 zero extra dependencies — and emits a falsifiable record (raw responses, grades,

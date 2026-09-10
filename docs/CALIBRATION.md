@@ -7,8 +7,13 @@
 ## What TrustBench is — and is not
 
 TrustBench ships the **scenarios**, the **scoring**, and a **real-model runner**
-(Ollama, zero extra dependencies). It still publishes **no real-model numbers in this
-repo** — run it yourself and publish your own, with the manifest that proves them.
+(Ollama, zero extra dependencies). Two real-model records are committed under
+[`runs/`](../runs): `runs/qwen3-8b-clean/manifest.json` (qwen3:8b, 20 of the 200
+scenarios, 1 sample each, temperature 0, seed 0) and `runs/qwen3-8b-subset/manifest.json`
+(same model and settings, 25 scenarios). Both are partial runs, so their scores are not
+corpus-wide numbers; the CLI has no scenario filter, so the reproduction command below
+runs the full 200-scenario corpus and writes a comparable manifest. Publish your own
+records the same way, with the manifest that proves them.
 
 To evaluate a real local model end-to-end, see **[docs/LAB.md](LAB.md)**:
 

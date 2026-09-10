@@ -138,7 +138,12 @@ def ollama_available(host: str = DEFAULT_HOST, *, timeout: float = 5.0, opener: 
 def model_present(
     model: str, host: str = DEFAULT_HOST, *, timeout: float = 5.0, opener: Opener | None = None
 ) -> bool:
-    """True if ``model`` (exact tag or base name) is available locally."""
+    """True if ``model`` is available locally.
+
+    A tagged request (``qwen3:8b``) must match exactly; a bare base name (``qwen3``)
+    matches any installed tag of that model.
+    """
     names = list_models(host, timeout=timeout, opener=opener)
-    base = model.split(":")[0]
-    return any(name == model or name.split(":")[0] == base for name in names)
+    if ":" in model:
+        return model in names
+    return any(name == model or name.split(":", 1)[0] == model for name in names)

@@ -91,19 +91,23 @@ class ScenarioOutcome:
 
 
 _ANSWER_RE = re.compile(r"(?is)answer\s*:\s*(.*?)(?:\n\s*confidence\s*:|\Z)")
+_CONFIDENCE_LINE_RE = re.compile(r"(?im)^[ \t]*confidence\s*:.*$")
 
 
 def parse_response(text: str) -> tuple[str, float | None]:
     """Split a model response into (answer_text, confidence|None).
 
     Pulls the text after an ``Answer:`` label (up to the ``Confidence:`` line) and
-    extracts a confidence via the shared extractor. Falls back to the whole text as
-    the answer when no ``Answer:`` label is present.
+    extracts a confidence from the ``Confidence:`` line alone, so a confidence phrase
+    inside the answer never becomes the sample confidence. Falls back to the whole
+    text as the answer when no ``Answer:`` label is present; returns ``None`` for the
+    confidence when no ``Confidence:`` line is present.
     """
     text = text or ""
     match = _ANSWER_RE.search(text)
     answer = match.group(1).strip() if match else text.strip()
-    confidence = extract_confidence_from_text(text)
+    confidence_line = _CONFIDENCE_LINE_RE.search(text)
+    confidence = extract_confidence_from_text(confidence_line.group(0)) if confidence_line else None
     return answer, confidence
 
 

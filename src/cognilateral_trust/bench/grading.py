@@ -132,7 +132,7 @@ def grade_answer_match(scenario: BenchScenario, answer: str) -> GradeResult:
     """Correct iff the answer reflects the known ground truth.
 
     Strategy (deterministic):
-      1. Substring match of the primary ground-truth clause, OR
+      1. Token-bounded match of the primary ground-truth clause ("4" does not match "14"), OR
       2. >= 60% of the ground truth's significant tokens present in the answer.
     Number-words are normalized to digits ("four" -> "4"), so "Yes"/"No" and small
     integers grade robustly.
@@ -146,7 +146,7 @@ def grade_answer_match(scenario: BenchScenario, answer: str) -> GradeResult:
     primary = _primary_clause(scenario.ground_truth)
     norm_primary = normalize(primary)
 
-    if norm_primary and norm_primary in norm_answer:
+    if norm_primary and f" {norm_primary} " in f" {norm_answer} ":
         return GradeResult(1.0, "answer_match", f"matched ground truth '{primary}'")
 
     gt_tokens = _significant_tokens(scenario.ground_truth)
