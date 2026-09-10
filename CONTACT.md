@@ -5,8 +5,8 @@
 ## Primary channels
 
 - **Email:** `eric@cognilateral.com` — fastest path to a reply
-- **GitHub Issues:** <https://github.com/heymumford/cognilateral-trust/issues>
-- **GitHub Discussions:** <https://github.com/heymumford/cognilateral-trust/discussions>
+- **GitHub Issues:** <https://github.com/vorthruna/cognilateral-trust/issues>
+- **GitHub Discussions:** <https://github.com/vorthruna/cognilateral-trust/discussions>
 
 ## Privacy
 

@@ -6,7 +6,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/cognilateral-trust)](https://pypi.org/project/cognilateral-trust/)
 [![Python](https://img.shields.io/pypi/pyversions/cognilateral-trust)](https://pypi.org/project/cognilateral-trust/)
-[![License](https://img.shields.io/github/license/heymumford/cognilateral-trust)](LICENSE)
+[![License](https://img.shields.io/github/license/vorthruna/cognilateral-trust)](LICENSE)
 
 ```bash
 pip install cognilateral-trust

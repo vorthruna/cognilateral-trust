@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Date:** 2026-03-27
-**Authors:** Eric Mumford (@heymumford)
+**Authors:** vorthruna (@vorthruna)
 **License:** CC-BY-4.0
 
 ## Purpose
