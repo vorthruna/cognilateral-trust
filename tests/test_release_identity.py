@@ -128,6 +128,14 @@ def test_exact_approved_committed_identity_is_the_only_ready_state(clean_project
     assert result["selected"] == {"distribution": "cognilateral-trust", "version": "1.4.0"}
 
 
+def test_empty_candidate_list_is_an_invalid_invocation_not_approval_required(clean_project: Path) -> None:
+    result = identity.resolve_identity(clean_project, [])
+
+    assert result["status"] == "NO_CANDIDATES"
+    assert result["selected"] is None
+    assert result["candidates"] == []
+
+
 def test_normalized_duplicate_candidates_are_ambiguous(clean_project: Path) -> None:
     result = identity.resolve_identity(
         clean_project,

@@ -155,6 +155,14 @@ def resolve_identity(
     approved: str | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed local decision without changing repository state."""
+    if not candidate_values:
+        return _result(
+            status="NO_CANDIDATES",
+            observed=None,
+            candidates=[],
+            reason="no candidate identities were supplied — nothing to approve or select",
+        )
+
     try:
         candidates = sorted(
             (parse_identity(value) for value in candidate_values),

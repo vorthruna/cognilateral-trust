@@ -74,6 +74,11 @@ class TestParseResponse:
         answer, conf = parse_response("Paris is the capital.")
         assert "Paris" in answer
 
+    def test_confidence_line_without_colon_is_still_a_delimiter(self) -> None:
+        answer, conf = parse_response("Answer: Paris\nConfidence 0.91")
+        assert answer == "Paris"
+        assert conf == 0.91
+
 
 class TestEvaluateScenario:
     def test_correct_high_confidence(self) -> None:
