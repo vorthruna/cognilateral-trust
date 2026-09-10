@@ -1,12 +1,12 @@
 # Contact
 
-`cognilateral-trust` is maintained by one person. You can reach him directly.
+`cognilateral-trust` is maintained by the Cognilateral project. Reach the maintainers directly.
 
 ## Primary channels
 
-- **Email:** `eric@cognilateral.com` — fastest path to a reply
-- **GitHub Issues:** <https://github.com/heymumford/cognilateral-trust/issues>
-- **GitHub Discussions:** <https://github.com/heymumford/cognilateral-trust/discussions>
+- **Email:** `hello@cognilateral.com` — fastest path to a reply
+- **GitHub Issues:** <https://github.com/vorthruna/cognilateral-trust/issues>
+- **GitHub Discussions:** <https://github.com/vorthruna/cognilateral-trust/discussions>
 
 ## Privacy
 
@@ -14,12 +14,12 @@ See [the privacy policy](docs/PRIVACY.md).
 
 ## Press, briefings, attribution
 
-- `eric@cognilateral.com`
+- `hello@cognilateral.com`
 - Cite the repo, the TrustBench calibration result, and the package version you used (from PyPI or your installed `pyproject.toml`). Quotes from the README are covered by Apache-2.0.
 
 ## Security
 
-Report vulnerabilities to `eric@cognilateral.com` with subject prefix `[SECURITY]`. Acknowledged within 48 hours.
+Report vulnerabilities to `hello@cognilateral.com` with subject prefix `[SECURITY]`. Acknowledged within 48 hours.
 
 ## Response expectations
 
