@@ -1,6 +1,6 @@
 # Contact
 
-`cognilateral-trust` is maintained by one person. You can reach him directly.
+`cognilateral-trust` is maintained by the Cognilateral project. Reach the maintainers directly.
 
 ## Primary channels
 
